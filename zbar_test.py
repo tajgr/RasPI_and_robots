@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 """
   The tool for barcode reading
 """
-
+#ssh test
 import io
 import time
 import picamera
@@ -21,9 +21,7 @@ def runBarcodeReader():
 #   "Rewind" the stream to the beginning so we can read its content
     stream.seek(0)
     pil = Image.open(stream)
-#
-#########################################
-#
+
 #   create a reader
     scanner = zbar.ImageScanner()
 
@@ -42,7 +40,7 @@ def runBarcodeReader():
 
 #   extract results
     for symbol in image:
-#       print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+#   print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
         print symbol.type, symbol.data
     
 #   clean up
