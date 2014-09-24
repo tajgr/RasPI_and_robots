@@ -3,7 +3,11 @@
 """
   The tool for barcode reading
 """
-#ssh test
+# zbar
+#instaling: sudo apt-get install python-zbar
+#http://zbar.sourceforge.net/
+#https://github.com/ZBar/ZBar/tree/master/python/examples
+
 import io
 import time
 import picamera
