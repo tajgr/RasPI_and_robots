@@ -12,12 +12,13 @@ import sys
 import numpy as np
 
 # Martin's function from heidi/airrace_drone.py
-def timeName( prefix, ext ):
+def timeName( prefix, ext, index ):
   dt = datetime.datetime.now()
-  filename = prefix + dt.strftime("%y%m%d_%H%M%S.") + ext
+  index = "_" + index
+  filename = prefix + dt.strftime("%y%m%d_%H%M%S") + index + ext
   return filename
 
-def picameraToCv2( saving = False ):
+def picameraToCv2( saving = True ):
 #    Create the in-memory stream
     stream = io.BytesIO()
     camera = picamera.PiCamera()
@@ -28,8 +29,13 @@ def picameraToCv2( saving = False ):
     data = np.fromstring(stream.getvalue(), dtype=np.uint8)
 #    "Decode" the image from the array, preserving colour
     image = cv2.imdecode(data, 1)
+    ii = 0
     if saving:
-        cv2.imwrite( "image.jpg", image )
+        actulalTime = time.time()
+        index = str(ii)
+        filename = timeName( "/home/pi/git/RasPI_and_robots/logs/image_", ".jpg", index )
+        cv2.imwrite( filename, image )
+        ii = ii + 1
     return image
 
 def imageSave( workingTime = 10.0 ):
@@ -38,13 +44,16 @@ def imageSave( workingTime = 10.0 ):
     time.sleep(2)
     timeStart = time.time()
     actulalTime = time.time()
+    ii = 0
     while timeStart > actulalTime - workingTime:
         actulalTime = time.time()
-        filename = timeName( "/home/pi/git/RasPI_and_robots/logs/image_", "jpg" )
+        index = str(ii)
+        filename = timeName( "/home/pi/git/RasPI_and_robots/logs/image_", ".jpg", index )
         camera.capture( filename )
+        ii = ii + 1
 
 if __name__ == "__main__":
     print __doc__
 #    sys.exit()
-#    picameraToCv2( saving = True )
-    imageSave()
+    picameraToCv2( )
+#    imageSave()
