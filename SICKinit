@@ -14,6 +14,7 @@
 case "$1" in
     start)
        /home/pi/git/RasPI_and_robots/SICK2014_main.py run
+       /home/pi/git/RasPI_and_robots/shutdown_RPi.py
         ;;
     stop)
         killall SICK2014_main
