@@ -56,6 +56,7 @@ class MyFuncs:
 
     def term( self ):
         self.logs.close()
+        self.camera.close()
         self.logs = None
         self.camera = None
         self.stream = None
