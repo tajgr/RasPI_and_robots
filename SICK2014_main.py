@@ -11,55 +11,66 @@ import sys
 from picamera_tool import *
 from Digit_detect import *
 
-def ledLight():
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(11, GPIO.OUT)
-    GPIO.output(11, True)
-    time.sleep(5)
-    GPIO.output(11, False)
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCRequestHandler
 
-def sickMain( workingTime = 60, saving = True ):
-    detected = []
-    logs = open("/home/pi/git/RasPI_and_robots/logs/detection.txt", "a")
-    stream = io.BytesIO()
-    camera = picamera.PiCamera()
-    camera.resolution = (640, 480)
-#    camera.start_preview()
-    time.sleep(2)
-    A=Digit_detect('',20)
-    A.learn_from_file('/home/pi/git/RasPI_and_robots/samples.data','/home/pi/git/RasPI_and_robots/responses.data')
-    index = 0
-    timeStart = time.time()
-    actulalTime = time.time()
-    while timeStart > actulalTime - workingTime:
-        actulalTime = time.time()
-        
-        camera.capture(stream, format='jpeg')
+# Restrict to a particular path.
+class RequestHandler(SimpleXMLRPCRequestHandler):
+    rpc_paths = ('/RPC2',)
+
+# Create server
+server = SimpleXMLRPCServer(("192.168.1.1", 8000),
+                            requestHandler=RequestHandler)
+server.register_introspection_functions()
+
+
+class MyFuncs:
+    def init( self ):
+        self.logs = open("/home/pi/git/RasPI_and_robots/logs/detection.txt", "a")
+        self.stream = io.BytesIO()
+        self.camera = picamera.PiCamera()
+        self.camera.resolution = (640, 480)
+        time.sleep(2)
+        self.A = Digit_detect('',20)
+        self.A.learn_from_file('/home/pi/git/RasPI_and_robots/samples.data','/home/pi/git/RasPI_and_robots/responses.data')
+        self.index = 0
+        return 1
+
+    def step( self ):
+        self.camera.capture(self.stream, format='jpeg')
         #    Construct a numpy array from the stream
-        data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+        data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
         #    "Decode" the image from the array, preserving colour
         image = cv2.imdecode(data, 1)
-        stream.seek(0)
-        stream.truncate()
-        
-        if saving:
-#            actualTime = time.time()
-            filename = timeName( "/home/pi/git/RasPI_and_robots/logs/image_", ".jpg", str(index) )
-#            camera.capture( filename )
-            cv2.imwrite( filename, image )
-            index = index + 1
-#        print A.detect_digits_from_file('SICK_ROBOT/001.jpg')
+        self.stream.seek(0)
+        self.stream.truncate()
+        filename = timeName( "/home/pi/git/RasPI_and_robots/logs/image_", ".jpg", "%03d" % self.index )
+        cv2.imwrite( filename, image )
+        self.index += 1
         print filename
-#        detected = A.detect_digits_from_file(filename)
-        detected = A.detect_digits(image)
+        detected = self.A.detect_digits(image)
         print detected
-        logs.write(filename + str(detected ) + "\r\n")
-        logs.flush()
-    
-    logs.close()
+        self.logs.write(filename.split("/")[-1] +'\t'+ str(detected ) + "\r\n")
+        self.logs.flush()
+        return detected
+
+    def term( self ):
+        self.logs.close()
+        self.logs = None
+        self.camera = None
+        self.stream = None
+        return 1
+
+server.register_instance(MyFuncs())
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print __doc__
         sys.exit()
-    sickMain( workingTime = 10 )
+    print "STARTED"
+    server.serve_forever()
+
+#-------------------------------------------------------------------
+# vim: expandtab sw=4 ts=4 
+
