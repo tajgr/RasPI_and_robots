@@ -31,12 +31,13 @@ class MyFuncs:
         self.camera = picamera.PiCamera()
         self.camera.resolution = (640, 480)
         time.sleep(2)
-        self.A = Digit_detect('',20)
-        self.A.learn_from_file('/home/pi/git/RasPI_and_robots/samples.data','/home/pi/git/RasPI_and_robots/responses.data')
+        self.A = Digit_detect('',24)
+        self.A.learn_from_file('/home/pi/git/RasPI_and_robots/new_samples','/home/pi/git/RasPI_and_robots/new_responses')
         self.index = 0
         return 1
 
     def step( self ):
+        print "STEP"
         self.camera.capture(self.stream, format='jpeg')
         #    Construct a numpy array from the stream
         data = np.fromstring(self.stream.getvalue(), dtype=np.uint8)
@@ -48,14 +49,19 @@ class MyFuncs:
         cv2.imwrite( filename, image )
         self.index += 1
         print filename
-        detected = self.A.detect_digits(image)
+        try:
+           detected = self.A.detect_digits(image)
+        except:
+           print "EXCEPTION"
+           detected = []
         print detected
         self.logs.write(filename.split("/")[-1] +'\t'+ str(detected ) + "\r\n")
         self.logs.flush()
-        return detected
+        return [filename.split("/")[-1]] + detected
 
     def term( self ):
         self.logs.close()
+        self.camera.close()
         self.logs = None
         self.camera = None
         self.stream = None
