@@ -26,10 +26,12 @@ server.register_introspection_functions()
 
 class MyFuncs:
     def init( self ):
-        self.logs = open("/home/pi/git/RasPI_and_robots/logs/detection.txt", "a")
+        nameLog = timeName("", "", "")
+        self.logs = open("/home/pi/git/RasPI_and_robots/logs/detection"+nameLog+".txt", "a")
         self.stream = io.BytesIO()
         self.camera = picamera.PiCamera()
         self.camera.resolution = (640, 480)
+#        self.camera.EXPOSURE_MODES = 8
         time.sleep(2)
         self.A = Digit_detect('',24)
         self.A.learn_from_file('/home/pi/git/RasPI_and_robots/new_samples','/home/pi/git/RasPI_and_robots/new_responses')
@@ -53,7 +55,7 @@ class MyFuncs:
            detected = self.A.detect_digits(image)
         except:
            print "EXCEPTION"
-           detected = []
+           detected = [999]
         print detected
         self.logs.write(filename.split("/")[-1] +'\t'+ str(detected ) + "\r\n")
         self.logs.flush()
