@@ -13,6 +13,10 @@ import math
 import io
 from thread import start_new_thread
 from multiprocessing import Process, Queue
+import numpy as np
+import cv2
+
+from img_processing import *
 
 sys.path.append( "/home/pi/git/fireant/serial_servo" )
 sys.path.append( "/home/pi/git/fireant/ver1")
@@ -36,32 +40,15 @@ def timeName( prefix, ext, index ):
   filename = prefix + dt.strftime("%y%m%d_%H%M%S") + index + ext
   return filename
 
-def picameraToCv2( saving = True ):
-#    Create the in-memory stream
-    stream = io.BytesIO()
-    camera = picamera.PiCamera()
-    camera.start_preview()
-    time.sleep(2)
-    camera.capture(stream, format='jpeg')
-#    Construct a numpy array from the stream
-    data = np.fromstring(stream.getvalue(), dtype=np.uint8)
-#    "Decode" the image from the array, preserving colour
-    image = cv2.imdecode(data, 1)
-    ii = 0
-    if saving:
-        actulalTime = time.time()
-        index = str(ii)
-        filename = timeName( "/home/pi/git/RasPI_and_robots/fire_ant/logs/image_", ".jpg", index )
-        cv2.imwrite( filename, image )
-        ii = ii + 1
-    return image
 
 #def imageSave( workingTime = 300.0, test = 0 ):
 def processMain( queueIn, queueOut ):
+    stream = io.BytesIO()
     camera = picamera.PiCamera()
     camera.resolution = (640, 480)
     camera.start_preview()
     time.sleep(2)
+    
     timeStart = time.time()
     actulalTime = time.time()
     ii = 0
@@ -69,14 +56,21 @@ def processMain( queueIn, queueOut ):
     while True:
         shouldWork = queueIn.get()
         if shouldWork is None:
+            print "close camera" 
+            camera.close()
             break
-
+        
+        camera.capture(stream, format='jpeg')
+        data = np.fromstring(stream.getvalue(), dtype=np.uint8)
+        img = cv2.imdecode(data, 1)
         actulalTime = time.time()
         index = str(ii)
         filename = timeName( "/home/pi/git/RasPI_and_robots/fire_ant/logs/image_", ".jpg", index )
-        camera.capture( filename )
+        cv2.imwrite( filename, img )
+        
+        imgResult = imgProcessingMain( img, filename, directory = "" )
         ii = ii + 1
-        queueOut.put( (filename, 1) )
+        queueOut.put( ([ filename, imgResult ], 1) )
         
 #        time.sleep(0.5)
 
@@ -91,6 +85,12 @@ def getNewPicture( firstInit ):
     if firstInit:
         g_queueOut.put_nowait( 1 )
         return None
+
+    elif firstInit is None:
+        g_queueOut.put_nowait( None )
+        time.sleep(1)
+        g_queueOut = None
+
     else:
         if g_queueResults.empty():
             return None
@@ -103,8 +103,8 @@ def robotGo():
     com = LogIt( serial.Serial( '/dev/ttyAMA0', SERIAL_BAUD ) )
     robot = FireAnt( "Due", com )
     
-    robot.standUp()
     getNewPicture( firstInit=True )
+    robot.standUp()
     ii = 0
     while True:
         redButton = GPIO.input(22)
@@ -113,6 +113,7 @@ def robotGo():
         
         picResult = getNewPicture( firstInit=False )
         if picResult is not None:
+            print picResult
             pass # do something
 
         if ii == 3:
@@ -128,6 +129,7 @@ def robotGo():
         
     robot.sitDown()
     robot.stopServos()
+    getNewPicture(None)
 
 
 def fireAntMain():
