@@ -61,8 +61,8 @@ def dataFromDirectory( directory ):
 
 
 def imgProcessingMain( img, imgFileName, directory = "" ):
-    if img:
-        cv2.imwrite(directory + imgFileName, img )
+    #if img:
+    #    cv2.imwrite(directory + imgFileName, img )
     if img == None:
         img = cv2.imread( directory + imgFileName )
     try:
@@ -93,8 +93,11 @@ def imgProcessingMain( img, imgFileName, directory = "" ):
         cv2.drawContours(img2, contours2, -1, (0,255,0), 2)
         cv2.imwrite( directory + imgFileName.split(".")[0]+"_cnt.png", img2 )
         
+        return len(contours2)
+        
     except:
         print "--------------Error!!!------------------"
+        return None
 
 
 if __name__ == "__main__":
