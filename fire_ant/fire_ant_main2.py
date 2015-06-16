@@ -67,10 +67,12 @@ def processMain( queueIn, queueOut ):
         index = str(ii)
         filename = timeName( "/home/pi/git/RasPI_and_robots/fire_ant/logs/image_", ".jpg", index )
         cv2.imwrite( filename, img )
+        stream.seek(0)
+        stream.truncate()
         
         imgResult = imgProcessingMain( img, filename, directory = "" )
         ii = ii + 1
-        queueOut.put( ([ filename, imgResult ], 1) )
+        queueOut.put( ( [ filename, imgResult ] ) )
         
 #        time.sleep(0.5)
 
@@ -100,6 +102,8 @@ def getNewPicture( firstInit ):
 
 
 def robotGo():
+    logsRpiName = timeName( "/home/pi/git/RasPI_and_robots/fire_ant/logs/logsRpi_", ".txt", "" )
+    rpiLogs  = open( logsRpiName, "w")
     com = LogIt( serial.Serial( '/dev/ttyAMA0', SERIAL_BAUD ) )
     robot = FireAnt( "Due", com )
     
@@ -111,16 +115,71 @@ def robotGo():
         if redButton == True:
             break
         
+        a = 0
         picResult = getNewPicture( firstInit=False )
         if picResult is not None:
             print picResult
-            pass # do something
-
-        if ii == 3:
-            a = math.radians(0)
-            ii = 0
-        else:
-            a = 0
+            contoursXYC = picResult[1]
+            bigL = 0
+            bigR = 0
+            smL = 0
+            smR = 0
+            vBigL = 0
+            vBigR = 0
+            
+            for item in contoursXYC:
+                if item[0] < 500:
+                    if item[1] < 320:
+                        smL += 1
+                    else:
+                        smR += 1
+                elif item[0] < 5000:
+                    if item[1] < 280:
+                        bigL += 1
+                    elif item[1] > 360:
+                        bigR += 1
+                else:
+                    if item[1] < 280:
+                        vBigL += 1
+                    elif item[1] > 360:
+                        vBigR += 1
+            
+            print "sm l r:", smL, smR
+            print "big l r: ", bigL, bigR
+            print "vBig l r: ", vBigL, vBigR
+            
+            direction = None
+            if ( vBigL == 0 ) and ( vBigR == 0 ):
+                if bigL > bigR *2.0:
+                    direction = "R"
+                elif bigR > bigL *2.0:
+                    direction = "L"
+                
+            elif vBigL == 0:
+                direction = "L"
+               
+            elif vBigR == 0:
+                direction = "R"
+            
+            else:
+                direction = None
+            
+            ###
+            #direction = "L"            
+            ###
+            if direction == "L":
+                a = math.radians(5)
+                
+            elif direction == "R":
+                a = math.radians(-5)
+                
+            rpiLogs.write( str(ii)+"\r\n")
+            rpiLogs.write( str( picResult[0] )+"\r\n")
+            rpiLogs.write( str( contoursXYC )+"\r\n")
+            rpiLogs.write( "sm l r:"+str(smL)+", "+str(smR)+"\r\n")
+            rpiLogs.write( "big l r:"+str(bigL)+", "+str(bigR)+"\r\n")
+            rpiLogs.write( "vBig l r:"+str(vBigL)+", "+str(vBigR)+"\r\n")
+            rpiLogs.write( str(direction)+"\r\n")
             
         robot.walk( step=(0.02, 0.0, a), numSteps=1)
         #robot.walk( step=(0.0, -0.02, 0.0), numSteps=1) 
@@ -130,6 +189,7 @@ def robotGo():
     robot.sitDown()
     robot.stopServos()
     getNewPicture(None)
+    rpiLogs.close()
 
 
 def fireAntMain():
